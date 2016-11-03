@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+
+base_dir="$(dirname "$(readlink -f "$0")")"
+base_dir="${base_dir%/}"
+
+dexpatcher_dir="$base_dir"
+dexpatcher_jar=( "$dexpatcher_dir"/dexpatcher-[0-9]*.jar )
+
+java -jar "$dexpatcher_jar" "$@"
