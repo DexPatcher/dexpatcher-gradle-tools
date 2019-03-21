@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# ApkTool Downloader
+
+set -e
+
+base_dir="$(dirname "$(readlink -f "$0")")"
+base_dir="${base_dir%/}"
+
+cd "$base_dir"
+
+function latest_release_tag_name() {
+
+    local repo="$1"
+
+    local tag="$( curl -L -sS "https://api.github.com/repos/$repo/releases/latest" | grep '^  "tag_name":' | cut -d '"' -f 4 )"
+    [[ "$tag" == "" ]] && echo "Error: Could not determine tag name of latest release" >&2 && exit 1
+    echo "$tag"
+
+}
+
+function download() {
+
+    local file="$1"
+    local url="$2"
+
+    local tmp="download.tmp"
+
+    echo "Downloading: $url"
+    rm -f "$tmp"
+    curl -L -# "$url" > "$tmp"
+    cp -T "$tmp" "$file"
+    rm -f "$tmp"
+
+}
+
+function download_executable() {
+
+    local file="$1"
+    local url="$2"
+
+    download "$file" "$url"
+    chmod +x "$file"
+
+}
+
+echo "Determining latest ApkTool version..."
+tag="$( latest_release_tag_name "iBotPeaches/Apktool" )"
+
+version="${tag#v}"
+echo "Latest version: $version"
+
+download_executable apktool.jar "https://github.com/iBotPeaches/Apktool/releases/download/$tag/apktool_$version.jar"
+
+download_executable apktool     "https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool"
+download_executable apktool-osx "https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/osx/apktool"
+download            apktool.bat "https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/windows/apktool.bat"
+
+mv "VERSION-"* "VERSION-$version" 2>/dev/null || true

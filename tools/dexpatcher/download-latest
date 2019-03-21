@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+# DexPatcher-tool Downloader
+
+set -e
+
+base_dir="$(dirname "$(readlink -f "$0")")"
+base_dir="${base_dir%/}"
+
+cd "$base_dir"
+
+function latest_release_tag_name() {
+
+    local repo="$1"
+
+    local tag="$( curl -L -sS "https://api.github.com/repos/$repo/releases/latest" | grep '^  "tag_name":' | cut -d '"' -f 4 )"
+    [[ "$tag" == "" ]] && echo "Error: Could not determine tag name of latest release" >&2 && exit 1
+    echo "$tag"
+
+}
+
+function download() {
+
+    local file="$1"
+    local url="$2"
+
+    local tmp="download.tmp"
+
+    echo "Downloading: $url"
+    rm -f "$tmp"
+    curl -L -# "$url" > "$tmp"
+    cp -T "$tmp" "$file"
+    rm -f "$tmp"
+
+}
+
+function download_executable() {
+
+    local file="$1"
+    local url="$2"
+
+    download "$file" "$url"
+    chmod +x "$file"
+
+}
+
+echo "Determining latest DexPatcher-tool version..."
+tag="$( latest_release_tag_name "DexPatcher/dexpatcher-tool" )"
+
+version="${tag#v}"
+echo "Latest version: $version"
+
+jar="dexpatcher-$version.jar"
+
+download_executable tmp.jar "https://github.com/DexPatcher/dexpatcher-tool/releases/download/$tag/$jar"
+
+rm -f dexpatcher-*.jar
+mv tmp.jar "$jar"
+
+unzip -jo "$jar" 'dexpatcher-annotation-*.jar'
+rm -f ../../libs/provided/dexpatcher-annotation/dexpatcher-annotation-*.jar
+mv dexpatcher-annotation-*.jar ../../libs/provided/dexpatcher-annotation/
